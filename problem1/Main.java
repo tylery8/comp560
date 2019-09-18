@@ -1,13 +1,22 @@
 package comp560;
 
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
 
 public class Main {
 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws FileNotFoundException {
+		
+		// Uses standard input as a default but attempts to read input from a file
 		Scanner reader = new Scanner(System.in);
+		try {
+			reader = new Scanner(new File(System.getProperty("user.dir") + "/input.txt"));
+		} catch (FileNotFoundException e) {
+			
+		}
 		
 		// Read the first line to determine n
 		String first_line = reader.next();
@@ -45,19 +54,20 @@ public class Main {
 		// All are set to the default limit of 100000 nodes/iterations which can be changed
 		// with an optional argument
 		KenKen bt_puzzle = new KenKen(layout, cages);
-		String bt_nodes = bt_puzzle.localSearch();
+		String bt_nodes = bt_puzzle.backtrack(false);
 		
 		KenKen obt_puzzle = new KenKen(layout, cages);
-		String obt_nodes = obt_puzzle.backtrack(false);
+		String obt_nodes = obt_puzzle.backtrack(true, 1000000);
 		
 		KenKen ls_puzzle = new KenKen(layout, cages);
-		String ls_iterations = ls_puzzle.backtrack(true);
+		String ls_iterations = ls_puzzle.localSearch();
 		
 		// Print the puzzle and the respective statistics for backtracking, optimized
 		// backtracking, and local search
 		if (obt_puzzle.solved()) obt_puzzle.print();
 		else if (ls_puzzle.solved()) ls_puzzle.print();
 		else System.out.println("*No method successfully solved the puzzle*" + '\n');
+		
 		System.out.println(bt_nodes);
 		System.out.println(obt_nodes);
 		System.out.println(ls_iterations);

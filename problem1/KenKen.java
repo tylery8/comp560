@@ -178,7 +178,7 @@ public class KenKen implements Observer {
 		backtrack(optimized, list, count, max_nodes);
 		
 		// It is either solved or has exceeded the max count. Returns appropriate response
-		return solved() ? ""+count[0] : "Exceeded max number of nodes";
+		return (optimized ? "Optimized " : "") + "Backtracking: " + (solved() ? count[0] + " nodes" : "Exceeded " + max_nodes + " nodes");
 	}
 	
 	// IN:	boolean		-> whether or not it is optimized backtracking
@@ -307,7 +307,7 @@ public class KenKen implements Observer {
 		}
 		
 		// It is either solved or has exceeded the max count. Returns appropriate response
-		return solved() ? ""+count : "Exceeded max number of iterations";
+		return "Local Search: " + (solved() ? count + " iterations" : "Exceeded " + max_iterations + " iterations");
 	}
 	
 	// IN:	Nothing
