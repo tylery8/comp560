@@ -1,4 +1,4 @@
-package comp560;
+package kenken;
 
 import java.util.ArrayList;
 import java.util.Collections;

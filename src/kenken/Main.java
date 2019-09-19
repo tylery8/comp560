@@ -1,4 +1,4 @@
-package comp560;
+package kenken;
 
 import java.io.File;
 import java.io.FileNotFoundException;
