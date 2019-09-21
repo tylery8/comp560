@@ -90,8 +90,6 @@ public class Constraint extends Observable implements Observer, Comparable<Const
 			return false;
 		}
 		
-		
-		
 		// Math check, handles each operation individually
 		if (_operator.equals("+")) {
 			int result = 0;
@@ -115,39 +113,6 @@ public class Constraint extends Observable implements Observer, Comparable<Const
 			return _nums[0] == 0 && _squares.get(0).getNumber() != _result;
 		}
 		
-		
-		
-//		if (_nums[0] > 0) return false; // Region is still unfinished -> math is not yet violated
-//		
-//		// Region is finished, so verify that it does not violate the math requirements
-//		// Beginning with max number to handle subtraction, division, or single number
-//		int result = 0;
-//		int max_index = 0;
-//		for (int i = 0; i < _squares.size(); i++)
-//			if (_squares.get(i).getNumber() > result) {
-//				result = _squares.get(i).getNumber();
-//				max_index = i;
-//			}
-//		
-//		// Combine with rest of squares according to operation
-//		for (int i = 0; i < _squares.size(); i++)
-//			if (i != max_index)
-//				switch(_operator) {
-//				case "+":
-//					result += _squares.get(i).getNumber();
-//					break;
-//				case "-":
-//					result -= _squares.get(i).getNumber();
-//					break;
-//				case "*":
-//					result *= _squares.get(i).getNumber();
-//					break;
-//				case "/":
-//					result /= _squares.get(i).getNumber();
-//					break;
-//				}
-//
-//		return result != _result; // Numbers do not combine to expected result -> it's a violation
 	}
 
 	// Orders Constraints according to how restricted they are to aid sorting Squares

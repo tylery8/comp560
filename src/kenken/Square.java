@@ -2,6 +2,7 @@ package kenken;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Observable;
 import java.util.Observer;
@@ -12,10 +13,12 @@ import java.util.Observer;
 public class Square extends Observable implements Comparable<Square> {
 	
 	private int _number;
+	private List<Integer> _options = new LinkedList<Integer>();
 	private List<Constraint> _observers = new ArrayList<Constraint>();
 	
-	public Square() {
-		
+	public Square(int n) {
+		for (int i = n; i > 0; i--)
+			_options.add(0, i);
 	}
 	
 	public int getNumber() {

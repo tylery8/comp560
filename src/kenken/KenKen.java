@@ -36,7 +36,7 @@ public class KenKen implements Observer {
 		_squares = new Square[n][n];
 		for (int i = 0; i < n; i++)
 			for (int j = 0; j < n; j++)
-				_squares[i][j] = new Square();
+				_squares[i][j] = new Square(n);
 	}
 	
 	// IN:	Nothing
@@ -263,7 +263,7 @@ public class KenKen implements Observer {
 	// number of violated constraints by the most.
 	public String localSearch(long max_iterations) {
 		int count = 0;
-		int max_swaps = _squares.length*_squares.length*(_squares.length-1)/2;
+		int max_swaps = _squares.length*(_squares.length-1);
 		
 		// This loop will not terminate until a solution is found or the maximum iterations
 		// has been reached.
@@ -274,34 +274,36 @@ public class KenKen implements Observer {
 			scramble();
 			for (int reset = 0; reset < max_swaps; reset++) {
 				
-				Square square1 = null;
-				Square square2 = null;
+				int index1 = 0;
+				int index2 = 0;
+				boolean row = false;
 				int min_violations = 3*_squares.length*_squares.length; // essentially MAX_VIOLATIONS
 				
-				// For each column (which contains numbers 1 through n, try swapping
-				// each pair of numbers and save the Squares for the best swap.
-				for (int i = 0; i < _squares.length; i++) {
-					for (int j = 0; j < _squares.length-1; j++) {
-						for (int k = j+1; k < _squares.length; k++) {
-							swap(_squares[i][j], _squares[i][k]);
+				// Try swapping each row and column and save whichever swap minimizes
+				// the number of violations
+				for (int i = 0; i < _squares.length-1; i++) {
+					for (int j = i+1; j < _squares.length; j++) {
+						for (boolean r : new boolean[] {true, false}) {
+							swap(i,j,r);
 							
 							if (_violations <= min_violations) {
-								square1 = _squares[i][j];
-								square2 = _squares[i][k];
+								index1 = i;
+								index2 = j;
+								row = r;
 								min_violations = _violations;
 							}
 							
-							swap(_squares[i][j], _squares[i][k]);
+							swap(i,j,r);
 						}
 					}
 				}
 				
 				// All swaps increase the total number of violations, so this is a
-				// local min
-				if (square1 == null) break;
+				// local min and it needs to reset or terminate
+				if (index1 == 0 && index2 == 0) break;
 				
 				// Otherwise a change was found, so make that change and increment the count
-				swap(square1, square2);
+				swap(index1, index2, row);
 				count++;
 			}
 		}
@@ -313,18 +315,64 @@ public class KenKen implements Observer {
 	// IN:	Nothing
 	// OUT:	Nothing
 	//
-	// Randomly fills in the puzzle with numbers 1 through n, ensuring each column uses
+	// Randomly fills in the puzzle with numbers 1 through n, ensuring each row and column uses
 	// the numbers 1 through n exactly once. Used for local search
 	private void scramble() {
+		List<List<Integer>> permutations = new ArrayList<List<Integer>>();
 		List<Integer> numbers = new ArrayList<Integer>(_squares.length);
 		for (int i = 1; i <= _squares.length; i++)
 			numbers.add(i);
+		
+		permute(permutations, numbers, 0, _squares.length-1);
+		Collections.shuffle(permutations);
+		
+		for (int i = 0; i < _squares.length; i++)
+			for (int j = 0; j < _squares.length; j++)
+				_squares[i][j].setNumber(0);
+		
 		for (int i = 0; i < _squares.length; i++) {
-			Collections.shuffle(numbers);
+			numbers = permutations.remove(0);
 			for (int j = 0; j < _squares.length; j++)
 				_squares[i][j].setNumber(numbers.get(j));
+			for (Constraint constraint : _constraints) {
+				if (!constraint.isCage() && constraint.isViolated()) {
+					i--;
+					break;
+				}
+			}
 		}
 	}
+	
+	// Creates a list of all permtations of n numbers
+	private void permute(List<List<Integer>> permutations, List<Integer> numbers, int left, int right) {
+		if (left == right)
+			permutations.add(new ArrayList<Integer>(numbers));
+		else {
+			for (int i = left; i <= right; i++) {
+				int tmp = numbers.get(left);
+				numbers.set(left, numbers.get(i));
+				numbers.set(i, tmp);
+				permute(permutations, numbers, left+1, right);
+				tmp = numbers.get(left);
+				numbers.set(left, numbers.get(i));
+				numbers.set(i, tmp);
+			}
+		}
+	}
+	
+	// IN:	int		-> index of the first row/column
+	//		int		-> index of the second row/column
+	//		boolean	-> whether it is a row switch
+	// OUT:	Nothing
+	//
+	// Swaps the numbers of two rows or column square by square
+	private void swap(int index1, int index2, boolean row) {
+		if (row) for (int i = 0; i < _squares.length; i++)
+			swap(_squares[i][index1], _squares[i][index2]);
+		else for (int i = 0; i < _squares.length; i++)
+			swap(_squares[index1][i], _squares[index2][i]);
+	}
+	
 	// IN:	Square		-> a first square
 	//		Square		-> a second square
 	// OUT:	Nothing
