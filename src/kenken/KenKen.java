@@ -116,6 +116,14 @@ public class KenKen implements Observer {
 	}
 	
 	// IN:	Nothing
+	// OUT:	int			-> the dimension of the puzzle
+	//
+	// Returns the value of n for an nxn puzzle
+	public int getDimensions() {
+		return _squares.length;
+	}
+	
+	// IN:	Nothing
 	// OUT:	boolean		-> whether or not the puzzle is solved
 	//
 	// Checks to make sure no Constraints are violated and that all Squares are non-zero
@@ -152,7 +160,7 @@ public class KenKen implements Observer {
 	//
 	// Defaults the max number of nodes for either backtracking to be 100000
 	public String backtrack(boolean optimized) {
-		return backtrack(optimized, 100000);
+		return backtrack(optimized, 1000000);
 	}
 	
 	// IN:	boolean		-> whether or not it is optimized backtracking
@@ -249,7 +257,7 @@ public class KenKen implements Observer {
 	//
 	// Defaults the max number of iterations for local search to be 100000
 	public String localSearch() {
-		return localSearch(100000);
+		return localSearch(1000000);
 	}
 	
 	// IN:	long		-> the maximum number of allowed iterations before early
@@ -263,7 +271,7 @@ public class KenKen implements Observer {
 	// number of violated constraints by the most.
 	public String localSearch(long max_iterations) {
 		int count = 0;
-		int max_swaps = _squares.length*(_squares.length-1);
+		int max_swaps = _squares.length*_squares.length*(_squares.length-1)/2;
 		
 		// This loop will not terminate until a solution is found or the maximum iterations
 		// has been reached.
@@ -276,34 +284,33 @@ public class KenKen implements Observer {
 				
 				int index1 = 0;
 				int index2 = 0;
-				boolean row = false;
+				int column = 0;
 				int min_violations = 3*_squares.length*_squares.length; // essentially MAX_VIOLATIONS
 				
-				// Try swapping each row and column and save whichever swap minimizes
-				// the number of violations
-				for (int i = 0; i < _squares.length-1; i++) {
-					for (int j = i+1; j < _squares.length; j++) {
-						for (boolean r : new boolean[] {true, false}) {
-							swap(i,j,r);
+				// Try swapping each pair of squares within each column and save whichever
+				// swap minimizes the number of violations
+				for (int col = 0; col < _squares.length; col++)
+					for (int i = 0; i < _squares.length-1; i++) {
+						for (int j = i+1; j < _squares.length; j++) {
+							swap(_squares[col][i],_squares[col][j]);
 							
 							if (_violations <= min_violations) {
 								index1 = i;
 								index2 = j;
-								row = r;
+								column = col;
 								min_violations = _violations;
 							}
 							
-							swap(i,j,r);
+							swap(_squares[col][i],_squares[col][j]);
 						}
 					}
-				}
 				
 				// All swaps increase the total number of violations, so this is a
 				// local min and it needs to reset or terminate
 				if (index1 == 0 && index2 == 0) break;
 				
 				// Otherwise a change was found, so make that change and increment the count
-				swap(index1, index2, row);
+				swap(_squares[column][index1],_squares[column][index2]);
 				count++;
 			}
 		}
@@ -318,59 +325,19 @@ public class KenKen implements Observer {
 	// Randomly fills in the puzzle with numbers 1 through n, ensuring each row and column uses
 	// the numbers 1 through n exactly once. Used for local search
 	private void scramble() {
-		List<List<Integer>> permutations = new ArrayList<List<Integer>>();
 		List<Integer> numbers = new ArrayList<Integer>(_squares.length);
 		for (int i = 1; i <= _squares.length; i++)
 			numbers.add(i);
-		
-		permute(permutations, numbers, 0, _squares.length-1);
-		Collections.shuffle(permutations);
 		
 		for (int i = 0; i < _squares.length; i++)
 			for (int j = 0; j < _squares.length; j++)
 				_squares[i][j].setNumber(0);
 		
 		for (int i = 0; i < _squares.length; i++) {
-			numbers = permutations.remove(0);
+			Collections.shuffle(numbers);
 			for (int j = 0; j < _squares.length; j++)
 				_squares[i][j].setNumber(numbers.get(j));
-			for (Constraint constraint : _constraints) {
-				if (!constraint.isCage() && constraint.isViolated()) {
-					i--;
-					break;
-				}
-			}
 		}
-	}
-	
-	// Creates a list of all permtations of n numbers
-	private void permute(List<List<Integer>> permutations, List<Integer> numbers, int left, int right) {
-		if (left == right)
-			permutations.add(new ArrayList<Integer>(numbers));
-		else {
-			for (int i = left; i <= right; i++) {
-				int tmp = numbers.get(left);
-				numbers.set(left, numbers.get(i));
-				numbers.set(i, tmp);
-				permute(permutations, numbers, left+1, right);
-				tmp = numbers.get(left);
-				numbers.set(left, numbers.get(i));
-				numbers.set(i, tmp);
-			}
-		}
-	}
-	
-	// IN:	int		-> index of the first row/column
-	//		int		-> index of the second row/column
-	//		boolean	-> whether it is a row switch
-	// OUT:	Nothing
-	//
-	// Swaps the numbers of two rows or column square by square
-	private void swap(int index1, int index2, boolean row) {
-		if (row) for (int i = 0; i < _squares.length; i++)
-			swap(_squares[i][index1], _squares[i][index2]);
-		else for (int i = 0; i < _squares.length; i++)
-			swap(_squares[index1][i], _squares[index2][i]);
 	}
 	
 	// IN:	Square		-> a first square
