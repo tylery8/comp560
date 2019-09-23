@@ -54,10 +54,10 @@ public class Main {
 		// All are set to the default limit of 100000 nodes/iterations which can be changed
 		// with an optional argument
 		KenKen obt_puzzle = new KenKen(layout, cages);
-		String obt_nodes = obt_puzzle.backtrack(true, 1000000);
+		String obt_nodes = obt_puzzle.backtrack(true);
 		
 		KenKen bt_puzzle = new KenKen(layout, cages);
-		String bt_nodes = bt_puzzle.backtrack(false);
+		String bt_nodes = bt_puzzle.backtrack(false, obt_puzzle.solved() ? 100000 : 0);
 		
 		KenKen ls_puzzle = new KenKen(layout, cages);
 		String ls_iterations = ls_puzzle.localSearch();
