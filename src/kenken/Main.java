@@ -60,7 +60,7 @@ public class Main {
 		String bt_nodes = bt_puzzle.backtrack(false, bt_puzzle.getDimensions() <= 6 ? 1000000 : 0);
 		
 		KenKen ls_puzzle = new KenKen(layout, cages);
-		String ls_iterations = ls_puzzle.localSearch(ls_puzzle.getDimensions() <= 6 ? 1000000 : 0);
+		String ls_iterations = ls_puzzle.localSearch(ls_puzzle.getDimensions() <= 6 ? 800000 : 0);
 		
 		// Print the puzzle and the respective statistics for backtracking, optimized
 		// backtracking, and local search

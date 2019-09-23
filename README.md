@@ -1,6 +1,6 @@
 # How to run code:
 
-*Note: All code will automatically terminate in well under 30 seconds*
+*Note: All code will automatically terminate in under 30 seconds*
 
 <li>Note: This requires jdk
 <li>Open a command prompt and navigate to an appropriate directory
