@@ -19,8 +19,8 @@ public interface Qubic {
 	public Qubic move(int plane, int line, int index);
 	
 	// Returns the Qubic that results from exploiting its utility_function or exploring
-	// according to the given boolean. In the case of a tie, a random best move is returned
-	public Qubic move(boolean exploit);
+	// if the depth is 0. In the case of a tie, a random best move is returned
+	public Qubic move(int depth);
 	
 	// Returns the utility_function
 	public UtilityFunction getUtilityFunction();

@@ -15,28 +15,31 @@ public class Trials {
 	
 	public static UtilityFunction runTrials(int n1, int n2, int n3) {
 		UtilityFunction learned_values = new UtilityFunction();
-		for (double trials_done = 0; trials_done < n3; trials_done++) {
-			if (trials_done == n1) {
+		for (int i = 0; i < n3; i++) {
+			if (i == n1) {
 				System.out.println("After " + n1 + " trials:");
 				learned_values.print();
 			}
-			if (trials_done == n2) {
+			if (i == n2) {
 				System.out.println("After " + n2 + " trials:");
 				learned_values.print();
 			}
 			
-			runTrial(learned_values, 1/(trials_done+1), Math.pow(trials_done/n3, 2));
+			runTrial(learned_values, i+1, n3);
 		}
 		System.out.println("After " + n3 + " trials:");
 		learned_values.print();
 		return learned_values;
 	}
 	
-	private static void runTrial(UtilityFunction uf, double learning_rate, double exploitation_rate) {
+	private static void runTrial(UtilityFunction uf, double current_trial, int total_trials) {
+		double learning_rate = 1/current_trial;
+		double exploitation_rate = 0;
+		
 		Qubic trial = Qubic.newGame(uf);
-		boolean play_as_x = Math.random() < .5;
+		boolean is_x = Math.random() < 0.5;
 		while (trial.winner() == null)
-			trial = trial.xTurn() ^ play_as_x ? trial.move(false) : trial.move(Math.random() < exploitation_rate);
+			trial = trial.xTurn() ^ is_x ? trial.move(0) : trial.move(Math.random() < exploitation_rate ? 1 : 0);
 		trial.updateUtilityFunction(learning_rate);
 	}
 
@@ -46,15 +49,11 @@ public class Trials {
 		game.print();
 		while (game.winner() == null)
 			try {
-				game = game.xTurn() ^ player_is_x ? game.move(true) : game.move(scanner.nextInt(), scanner.nextInt(), scanner.nextInt());
+				game = game.xTurn() ^ player_is_x ? game.move(4) : game.move(scanner.nextInt(), scanner.nextInt(), scanner.nextInt());
 				game.print();
 			} catch (IllegalArgumentException e) {
 				System.err.println("Illegal Move. Try again");
 			}
-	}
-	
-	public static double learningRate(double proportion_done) {
-		return 0.2*(1-1/(1+Math.pow(Math.E,-2*(proportion_done-0.5))));
 	}
 
 }

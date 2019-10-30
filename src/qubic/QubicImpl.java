@@ -6,14 +6,12 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 
 public class QubicImpl implements Qubic {
 	
 	private long _x;
 	private long _o;
-	private Set<Long> _moves_left;
 	private UtilityFunction _utility_function;
 	
 	public QubicImpl() {
@@ -23,28 +21,25 @@ public class QubicImpl implements Qubic {
 	public QubicImpl(UtilityFunction utility_function) {
 		_x = 0;
 		_o = 0;
-		_moves_left = new HashSet<Long>(64);
-		for (long move = 1L; move != 0; move <<= 1)
-			_moves_left.add(move);
 		_utility_function = utility_function;
 	}
 	
 	private QubicImpl(QubicImpl previous, long move) {
 		_x = previous._x;
 		_o = previous._o;
-		_moves_left = new HashSet<Long>(previous._moves_left);
 		_utility_function = previous._utility_function;
 		
 		if (xTurn())
 			_x |= move;
 		else
 			_o |= move;
-		
-		_moves_left.remove(move);
 	}
 
 	public boolean xTurn() {
-		return _moves_left.size() % 2 == 0;
+		int count = 0;
+		for (long taken = _x|_o; taken != 0; taken &= taken-1)
+			count++;
+		return count % 2 == 0;
 	}
 	
 	public Double winner() {
@@ -52,7 +47,7 @@ public class QubicImpl implements Qubic {
 			return 1.0;
 		if (hasWon(_o))
 			return -1.0;
-		if (_moves_left.size() == 0)
+		if (~(_x|_o) == 0)
 			return 0.0;
 		return null;
 	}
@@ -60,25 +55,64 @@ public class QubicImpl implements Qubic {
 	public Qubic move(int plane, int line, int index) {
 		if (plane < 0 || line < 0 || index < 0 || plane > 3 || line > 3 || index > 3)
 			throw new IllegalArgumentException();
-		long move = 1L << (16*plane + 4*line + index);
-		if (_moves_left.contains(move) && winner() == null)
+		return move(1L << (16*plane + 4*line + index));
+	}
+	
+	private Qubic move(long move) {
+		if (((_x|_o)&move) == 0 && winner() == null)
 			return new QubicImpl(this, move);
 		throw new IllegalArgumentException();
 	}
 	
-	public Qubic move(boolean exploit) {
-		if (!exploit) {
-			List<QubicImpl> next_moves = nextMoves();
-			return next_moves.get((int) (Math.random() * next_moves.size()));
-		}
-			
+	public Qubic move(int depth) {
 		QubicImpl best = null;
-		for (QubicImpl move : nextMoves())
-			if (best == null || xTurn() && move.utility() > best.utility() || !xTurn() && move.utility() < best.utility())
+		double best_eval = 0;
+		for (QubicImpl move : nextMoves()) {
+			double move_eval = move.alphabeta(depth - 1, -1000 - depth, 1000 + depth);
+			if (best == null || xTurn() && move_eval > best_eval || !xTurn() && move_eval < best_eval) {
 				best = move;
+				best_eval = move_eval;
+			}
+		}
 		return best;
 	}
 	
+	private double alphabeta(int depth, double alpha, double beta) {
+		if (depth < 0)
+			return 0;
+		List<QubicImpl> next_moves = nextMoves();
+		if (next_moves.size() == 0)
+			return (1000+depth)*winner();
+		if (depth == 0)
+			return utility();
+
+		if (xTurn()) {
+			double max = -1000 - depth;
+			for (QubicImpl move : next_moves) {
+				double evaluation = move.alphabeta(depth - 1, alpha, beta);
+				if (evaluation > max)
+					max = evaluation;
+				if (evaluation > alpha)
+					alpha = evaluation;
+				if (alpha >= beta)
+					return alpha;
+			}
+			return max;
+		} else {
+			double min = 1000 + depth;
+			for (QubicImpl move : next_moves) {
+				double evaluation = move.alphabeta(depth - 1, alpha, beta);
+				if (evaluation < min)
+					min = evaluation;
+				if (evaluation < beta)
+					beta = evaluation;
+				if (alpha >= beta)
+					return beta;
+			}
+			return min;
+		}
+	}
+
 	public UtilityFunction getUtilityFunction() {
 		return _utility_function;
 	}
@@ -151,15 +185,17 @@ public class QubicImpl implements Qubic {
 		else
 			System.out.println("Draw!");
 		System.out.println();
+		System.out.println();
 	}
 	
 	private List<QubicImpl> nextMoves() {
-		List<QubicImpl> next_states = new ArrayList<QubicImpl>();
+		List<QubicImpl> next_moves = new ArrayList<QubicImpl>();
 		if (winner() == null)
-			for (long move : _moves_left)
-				next_states.add(new QubicImpl(this, move));
-		Collections.shuffle(next_states);
-		return next_states;
+			for (long move = 1L; move != 0; move <<= 1)
+				if (((_x|_o)&move) == 0)
+					next_moves.add(new QubicImpl(this, move));
+		Collections.shuffle(next_moves);
+		return next_moves;
 	}
 	
 	private double utility() {
@@ -215,8 +251,10 @@ public class QubicImpl implements Qubic {
 		// Cube diagonals
 		long xyz_diag1 = 0b1000000000000000000001000000000000000000001000000000000000000001L;
 		long xyz_diag2 = 0b1000000000000000000100000000000000000010000000000000000001000L;
+		long xyz_diag3 = 0b1000000000000100000000000010000000000001000000000000L;
+		long xyz_diag4 = 0b1000000000010000000000100000000001000000000000000L;
 		
-		return (board & xyz_diag1) == xyz_diag1 || (board & xyz_diag2) == xyz_diag2;
+		return (board & xyz_diag1) == xyz_diag1 || (board & xyz_diag2) == xyz_diag2 || (board & xyz_diag3) == xyz_diag3 || (board & xyz_diag4) == xyz_diag4;
 	}
 
 }
