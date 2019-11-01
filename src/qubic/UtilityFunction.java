@@ -1,5 +1,7 @@
 package qubic;
 
+import java.math.BigDecimal;
+import java.math.MathContext;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -39,9 +41,8 @@ public class UtilityFunction {
 	}
 	
 	public void print() {
-		for (Entry<SquareType, Double> entry : _values.entrySet()) {
-			System.out.println(entry.getKey() + ": " + entry.getValue());
-		}
+		for (Entry<SquareType, Double> entry : _values.entrySet())
+			System.out.println(entry.getKey().toString().charAt(0) + entry.getKey().toString().toLowerCase().substring(1) + ": " + new BigDecimal(entry.getValue()).round(new MathContext(3)));
 		System.out.println();
 	}
 }

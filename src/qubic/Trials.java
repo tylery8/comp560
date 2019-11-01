@@ -9,7 +9,7 @@ public class Trials {
 		Scanner scanner = new Scanner(System.in);		
 		UtilityFunction learned_values = runTrials(scanner.nextInt(), scanner.nextInt(), scanner.nextInt());
 		
-//		playGame(learned_values, true);
+		playGame(learned_values, true);
 		
 	}
 	
@@ -34,7 +34,7 @@ public class Trials {
 	
 	private static void runTrial(UtilityFunction uf, double current_trial, int total_trials) {
 		double learning_rate = 1/current_trial;
-		double exploitation_rate = 0;
+		double exploitation_rate = current_trial/total_trials-.5;
 		
 		Qubic trial = Qubic.newGame(uf);
 		boolean is_x = Math.random() < 0.5;

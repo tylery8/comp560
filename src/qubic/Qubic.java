@@ -12,8 +12,8 @@ public interface Qubic {
 	// Returns true if it is X's turn, false otherwise
 	public boolean xTurn();
 	
-	// Returns 1.0 if X won, -1.0 if O won, 0.0 if drawn, and null otherwise
-	public Double winner();
+	// Returns 1 if X won, -1 if O won, 0 if drawn, and null otherwise
+	public Integer winner();
 	
 	// Returns the Qubic that results from making a move at the given location
 	public Qubic move(int plane, int line, int index);
