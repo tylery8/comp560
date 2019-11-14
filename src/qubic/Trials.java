@@ -16,19 +16,17 @@ public class Trials {
 	public static UtilityFunction runTrials(int n1, int n2, int n3) {
 		UtilityFunction learned_values = new UtilityFunction();
 		for (int i = 0; i < n3; i++) {
-			if (i == n1) {
-				System.out.println("After " + n1 + " trials:");
-				learned_values.print();
-			}
-			if (i == n2) {
-				System.out.println("After " + n2 + " trials:");
+			if (i == n1 || i == n2) {
+				System.out.println("After " + i + " trials:");
 				learned_values.print();
 			}
 			
 			runTrial(learned_values, i+1, n3);
 		}
+		
 		System.out.println("After " + n3 + " trials:");
 		learned_values.print();
+		
 		return learned_values;
 	}
 	
