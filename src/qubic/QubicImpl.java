@@ -14,6 +14,19 @@ public class QubicImpl implements Qubic {
 	private UtilityFunction _utility_function;
 
 	private static Map<QubicImpl, Double> _transposition_table;
+	
+	private static final Comparator<QubicImpl> MOVE_ORDER = new Comparator<QubicImpl>() {
+
+		public int compare(QubicImpl q1, QubicImpl q2) {
+			Double q1_value = _transposition_table.get(q1);
+			Double q2_value = _transposition_table.get(q2);
+			if (q2_value == null)
+				return 1;
+			if (q1_value == null)
+				return -1;
+			return q1_value.compareTo(q2_value);
+		}
+	};
 
 	private static final long[] WIN_PATTERNS = new long[] {
 			0b0000000000000000000000000000000000000000000000000000000000001111L,
@@ -167,7 +180,7 @@ public class QubicImpl implements Qubic {
 
 		for (int depth = 1; depth <= max_depth; depth++) {
 
-			sortMoves(next_moves);
+			Collections.sort(next_moves, MOVE_ORDER);
 
 			QubicImpl best = null;
 			double best_eval = 0;
@@ -192,7 +205,7 @@ public class QubicImpl implements Qubic {
 		if (depth <= 0)
 			return utility();
 
-		sortMoves(next_moves);
+		Collections.sort(next_moves, MOVE_ORDER);
 
 		if (xTurn()) {
 			double max = -1000 - depth;
@@ -322,21 +335,6 @@ public class QubicImpl implements Qubic {
 			if ((player & win_pattern) == win_pattern)
 				return true;
 		return false;
-	}
-
-	private static void sortMoves(List<QubicImpl> next_moves) {
-		Collections.sort(next_moves, new Comparator<QubicImpl>() {
-
-			public int compare(QubicImpl q1, QubicImpl q2) {
-				Double q1_value = _transposition_table.get(q1);
-				Double q2_value = _transposition_table.get(q2);
-				if (q2_value == null)
-					return 1;
-				if (q1_value == null)
-					return -1;
-				return q1_value.compareTo(q2_value);
-			}
-		});
 	}
 
 	@Override
