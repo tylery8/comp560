@@ -4,7 +4,7 @@ import java.util.Scanner;
 
 public class Trials {
 
-	public static void main(String[] args) {
+	public static void main(String[] args) { 
 		
 		Scanner scanner = new Scanner(System.in);		
 		UtilityFunction learned_values = runTrials(scanner.nextInt(), scanner.nextInt(), scanner.nextInt());
