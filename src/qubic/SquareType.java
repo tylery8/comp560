@@ -9,7 +9,7 @@ public enum SquareType {
 	// EDGE: One of the 24 squares that run along the shortest path between two corners
 	// FACE: One of the 24 squares directly adjacent to the middle squares
 	
-	private static final SquareType[] layout = new SquareType[] {
+	private static final SquareType[] LAYOUT = new SquareType[] {
 			SquareType.CORNER, SquareType.EDGE, SquareType.EDGE, SquareType.CORNER,
 			SquareType.EDGE, SquareType.FACE, SquareType.FACE, SquareType.EDGE,
 			SquareType.EDGE, SquareType.FACE, SquareType.FACE, SquareType.EDGE,
@@ -32,7 +32,7 @@ public enum SquareType {
 	};
 	
 	public static SquareType valueOf(long l) {
-		return layout[Long.numberOfTrailingZeros(l)];
+		return LAYOUT[Long.numberOfTrailingZeros(l)];
 	}
 
 }

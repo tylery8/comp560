@@ -2,6 +2,7 @@ package qubic;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -11,6 +12,8 @@ public class QubicImpl implements Qubic {
 	private long _x;
 	private long _o;
 	private UtilityFunction _utility_function;
+	
+	private static Map<QubicImpl, Double> _transposition_table;
 	
 	private static final long[] WIN_PATTERNS = new long[] {
 		0b0000000000000000000000000000000000000000000000000000000000001111L,
@@ -153,32 +156,50 @@ public class QubicImpl implements Qubic {
 		throw new IllegalArgumentException();
 	}
 	
-	public Qubic move(int depth) {
-		QubicImpl best = null;
-		double best_eval = 0;
-		for (QubicImpl move : nextMoves()) {
-			double move_eval = move.alphabeta(depth - 1, -1000 - depth, 1000 + depth);
-			if (best == null || xTurn() && move_eval > best_eval || !xTurn() && move_eval < best_eval) {
-				best = move;
-				best_eval = move_eval;
+	public Qubic move(int max_depth) {
+		_transposition_table = new HashMap<QubicImpl, Double>();
+		
+		QubicImpl overall_best = null;
+		
+		List<QubicImpl> next_moves = nextMoves();
+		
+		if (max_depth <= 0)
+			return next_moves.get((int) (Math.random()*next_moves.size()));
+		
+		for (int depth = 1; depth <= max_depth; depth++) {
+			
+			sortMoves(next_moves);
+			
+			QubicImpl best = null;
+			double best_eval = 0;
+			for (QubicImpl move : next_moves) {
+				double move_eval = move.alphabeta(depth - 1, -1000 - max_depth, 1000 + max_depth);
+				_transposition_table.put(move, move_eval);
+				if (best == null || xTurn() && move_eval > best_eval || !xTurn() && move_eval < best_eval) {
+					best = move;
+					best_eval = move_eval;
+				}
 			}
+			overall_best = best;
 		}
-		return best;
+		
+		return overall_best;
 	}
-	
+
 	private double alphabeta(int depth, double alpha, double beta) {
-		if (depth < 0)
-			return 0;
 		List<QubicImpl> next_moves = nextMoves();
 		if (next_moves.size() == 0)
 			return (1000+depth)*winner();
-		if (depth == 0)
+		if (depth <= 0)
 			return utility();
+		
+		sortMoves(next_moves);
 
 		if (xTurn()) {
 			double max = -1000 - depth;
 			for (QubicImpl move : next_moves) {
 				double evaluation = move.alphabeta(depth - 1, alpha, beta);
+				_transposition_table.put(move, evaluation);
 				if (evaluation > max)
 					max = evaluation;
 				if (evaluation > alpha)
@@ -191,6 +212,7 @@ public class QubicImpl implements Qubic {
 			double min = 1000 + depth;
 			for (QubicImpl move : next_moves) {
 				double evaluation = move.alphabeta(depth - 1, alpha, beta);
+				_transposition_table.put(move, evaluation);
 				if (evaluation < min)
 					min = evaluation;
 				if (evaluation < beta)
@@ -300,6 +322,28 @@ public class QubicImpl implements Qubic {
 			if ((player&win_pattern) == win_pattern)
 				return true;
 		return false;
+	}
+	
+	private static void sortMoves(List<QubicImpl> next_moves) {
+		Collections.sort(next_moves, new Comparator<QubicImpl>() {
+
+			public int compare(QubicImpl q1, QubicImpl q2) {
+				Double q1_value = _transposition_table.get(q1);
+				Double q2_value = _transposition_table.get(q2);
+				if (q2_value == null)
+					return 1;
+				if (q1_value == null)
+					return -1;
+				return q1_value.compareTo(q2_value);
+			}
+		}
+		);
+	}
+	
+	@Override
+	public boolean equals(Object other) {
+		QubicImpl other_qubic = (QubicImpl) other;
+		return _x == other_qubic._x && _o == other_qubic._o;
 	}
 
 }
