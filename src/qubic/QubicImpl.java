@@ -7,16 +7,23 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+// QubicImpl implements the Qubic interface (see Qubic) using a long to represent the
+// position of all the X's (1 for an X, 0 for not an X) and another long to represent the
+// position of all the O's (1 for an O, 0 for not an O). Additionally, each QubicImpl
+// stores and updates a utility_function that maps all SquareTypes to a double value.
+
 public class QubicImpl implements Qubic {
 
 	private long _x;
 	private long _o;
-	private UtilityFunction _utility_function;
 
 	private static Map<QubicImpl, Double> _transposition_table;
 	
+	// Comparator used to order moves without evaluating the two moves. It simply
+	// accesses their values from the transposition table. If the QubicImpl is not
+	// in the table, it is put later in the move ordering (this does not happen often
+	// because the minimax function uses iterative deepening)
 	private static final Comparator<QubicImpl> MOVE_ORDER = new Comparator<QubicImpl>() {
-
 		public int compare(QubicImpl q1, QubicImpl q2) {
 			Double q1_value = _transposition_table.get(q1);
 			Double q2_value = _transposition_table.get(q2);
@@ -28,6 +35,7 @@ public class QubicImpl implements Qubic {
 		}
 	};
 
+	// The long representations of the 74 different win cases
 	private static final long[] WIN_PATTERNS = new long[] {
 			0b0000000000000000000000000000000000000000000000000000000000001111L,
 			0b0000000000000000000000000000000000000000000000000000000011110000L,
@@ -118,20 +126,17 @@ public class QubicImpl implements Qubic {
 
 			0b0000000000000001000000000010000000000100000000001000000000000000L };
 
+	// Creates a QubicImpl in starting position
 	public QubicImpl() {
-		this(new UtilityFunction());
-	}
-
-	public QubicImpl(UtilityFunction utility_function) {
 		_x = 0;
 		_o = 0;
-		_utility_function = utility_function;
 	}
 
+	// Creates a QubicImpl based that is the result of the previous QubicImpl after the given
+	// move has been taken
 	private QubicImpl(QubicImpl previous, long move) {
 		_x = previous._x;
 		_o = previous._o;
-		_utility_function = previous._utility_function;
 
 		if (xTurn())
 			_x |= move;
@@ -139,53 +144,63 @@ public class QubicImpl implements Qubic {
 			_o |= move;
 	}
 
+	// See Qubic
+	@Override
 	public boolean xTurn() {
-		int count = 0;
-		for (long taken = _x | _o; taken != 0; taken &= taken - 1)
-			count++;
-		return count % 2 == 0;
+		return numOnes(_x|_o) % 2 == 0;
 	}
 
+	// See Qubic
+	@Override
 	public Integer winner() {
-		if (hasWon(_x))
-			return 1;
-		if (hasWon(_o))
-			return -1;
-		if (~(_x | _o) == 0)
-			return 0;
-		return null;
+		for (long win_pattern : WIN_PATTERNS) {
+			if ((_x & win_pattern) == win_pattern)
+				return 1;
+			if ((_o & win_pattern) == win_pattern)
+				return -1;
+		}
+		return (~(_x | _o) == 0) ? 0 : null;
 	}
 
+	// See Qubic
+	@Override
 	public Qubic move(int plane, int line, int index) {
 		if (plane < 0 || line < 0 || index < 0 || plane > 3 || line > 3 || index > 3)
 			throw new IllegalArgumentException();
-		return move(1L << (16 * plane + 4 * line + index));
-	}
-
-	private Qubic move(long move) {
+		long move = 1L << (16 * plane + 4 * line + index);
 		if (((_x | _o) & move) == 0 && winner() == null)
 			return new QubicImpl(this, move);
 		throw new IllegalArgumentException();
 	}
+	
+	// See Qubic
+	@Override
+	public Qubic move(UtilityFunction utility_function, int depth) {
+		return move(utility_function, depth, depth);
+	}
 
-	public Qubic move(int max_depth) {
-		_transposition_table = new HashMap<QubicImpl, Double>();
-
+	// See Qubic
+	@Override
+	public Qubic move(UtilityFunction utility_function, int min_depth, int max_depth) {
 		QubicImpl overall_best = null;
-
 		List<QubicImpl> next_moves = nextMoves();
 
+		// Random move
 		if (max_depth <= 0)
-			return next_moves.get((int) (Math.random() * next_moves.size()));
+			return next_moves.get(0);
 
+		_transposition_table = new HashMap<QubicImpl, Double>();
+		
+		// Uses iterative deepening to calculate the values of each move starting from a
+		// depth of 1 up to a depth of max_depth. Moves and values are saved in the transposition
+		// table to help with move ordering for the next iteration. The alphabeta method also
+		// contributes to the transposition table
 		for (int depth = 1; depth <= max_depth; depth++) {
-
-			Collections.sort(next_moves, MOVE_ORDER);
-
 			QubicImpl best = null;
 			double best_eval = 0;
+			Collections.sort(next_moves, MOVE_ORDER);
 			for (QubicImpl move : next_moves) {
-				double move_eval = move.alphabeta(depth - 1, -1000 - max_depth, 1000 + max_depth);
+				double move_eval = move.alphabeta(utility_function, depth - 1, max_depth-min_depth, -1000 - max_depth, 1000 + max_depth);
 				_transposition_table.put(move, move_eval);
 				if (best == null || xTurn() && move_eval > best_eval || !xTurn() && move_eval < best_eval) {
 					best = move;
@@ -198,53 +213,14 @@ public class QubicImpl implements Qubic {
 		return overall_best;
 	}
 
-	private double alphabeta(int depth, double alpha, double beta) {
-		List<QubicImpl> next_moves = nextMoves();
-		if (next_moves.size() == 0)
-			return (1000 + depth) * winner();
-		if (depth <= 0)
-			return utility();
-
-		Collections.sort(next_moves, MOVE_ORDER);
-
-		if (xTurn()) {
-			double max = -1000 - depth;
-			for (QubicImpl move : next_moves) {
-				double evaluation = move.alphabeta(depth - 1, alpha, beta);
-				_transposition_table.put(move, evaluation);
-				if (evaluation > max)
-					max = evaluation;
-				if (evaluation > alpha)
-					alpha = evaluation;
-				if (alpha >= beta)
-					return alpha;
-			}
-			return max;
-		} else {
-			double min = 1000 + depth;
-			for (QubicImpl move : next_moves) {
-				double evaluation = move.alphabeta(depth - 1, alpha, beta);
-				_transposition_table.put(move, evaluation);
-				if (evaluation < min)
-					min = evaluation;
-				if (evaluation < beta)
-					beta = evaluation;
-				if (alpha >= beta)
-					return beta;
-			}
-			return min;
-		}
-	}
-
-	public UtilityFunction getUtilityFunction() {
-		return _utility_function;
-	}
-
-	public void updateUtilityFunction(double learning_rate) {
+	// See Qubic
+	@Override
+	public void updateUtilityFunction(UtilityFunction utility_function, double learning_rate) {
 		Integer winner = winner();
 		if (winner == null || winner == 0)
 			return;
 
+		// Counting how many "winners" and "losers" each SquareType has
 		long winner_pattern = winner > 0 ? _x : _o;
 		long loser_pattern = winner < 0 ? _x : _o;
 		double winner_total = 0;
@@ -267,13 +243,16 @@ public class QubicImpl implements Qubic {
 			}
 		}
 
+		// Use the counts to calculate a net value for each SquareType, then update
+		// the value of that SquareType using the reinforced learning formula
 		for (SquareType st : SquareType.values()) {
 			double net_value = winner_spread.get(st) / winner_total - loser_spread.get(st) / loser_total;
-			_utility_function.setValue(st,
-					(1 - learning_rate) * _utility_function.getValue(st) + learning_rate * net_value);
+			utility_function.setValue(st, (1 - learning_rate) * utility_function.getValue(st) + learning_rate * net_value);
 		}
 	}
 
+	// See Qubic
+	@Override
 	public void print() {
 		String out = "";
 		for (long i = 1L; i != 0; i <<= 1) {
@@ -308,7 +287,57 @@ public class QubicImpl implements Qubic {
 		System.out.println();
 		System.out.println();
 	}
+	
+	// Recursive minimax algorithm with alpha-beta pruning. Move ordering and quiescence
+	// search are also included
+	private double alphabeta(UtilityFunction utility_function, int depth, int static_buffer, double alpha, double beta) {
+		List<QubicImpl> next_moves = nextMoves();
+		
+		// If the game is over return the appropriate value
+		if (next_moves.size() == 0)
+			return (1000 + depth) * winner();
+		
+		// If the depth has been reached (or it is static and in the static buffer region)
+		// return the evaluation at its current position
+		if (depth <= 0 || depth <= static_buffer && isStatic())
+			return utility(utility_function);
 
+		// Order moves by what was found in previous iterations and stored in the transposition
+		// table
+		Collections.sort(next_moves, MOVE_ORDER);
+
+		// Standard alphabeta algorithm (with storing values in transposition table)
+		if (xTurn()) {
+			double max = -1000 - depth;
+			for (QubicImpl move : next_moves) {
+				double evaluation = move.alphabeta(utility_function, depth - 1, static_buffer, alpha, beta);
+				_transposition_table.put(move, evaluation);
+				if (evaluation > max)
+					max = evaluation;
+				if (evaluation > alpha)
+					alpha = evaluation;
+				if (alpha >= beta)
+					return alpha;
+			}
+			return max;
+		} else {
+			double min = 1000 + depth;
+			for (QubicImpl move : next_moves) {
+				double evaluation = move.alphabeta(utility_function, depth - 1, static_buffer, alpha, beta);
+				_transposition_table.put(move, evaluation);
+				if (evaluation < min)
+					min = evaluation;
+				if (evaluation < beta)
+					beta = evaluation;
+				if (alpha >= beta)
+					return beta;
+			}
+			return min;
+		}
+	}
+
+	// Returns a list of all the possible QubicImpls that are one ply ahead of the
+	// current position
 	private List<QubicImpl> nextMoves() {
 		List<QubicImpl> next_moves = new ArrayList<QubicImpl>();
 		if (winner() == null)
@@ -319,22 +348,34 @@ public class QubicImpl implements Qubic {
 		return next_moves;
 	}
 
-	private double utility() {
+	// Returns the utility of the current position according to the utility_function
+	private double utility(UtilityFunction utility_function) {
 		double total = 0;
 		for (long i = 1L; i != 0; i <<= 1) {
 			if ((_x & i) != 0)
-				total += _utility_function.getValue(i);
+				total += utility_function.getValue(SquareType.valueOf(i));
 			else if ((_o & i) != 0)
-				total -= _utility_function.getValue(i);
+				total -= utility_function.getValue(SquareType.valueOf(i));
 		}
 		return total;
 	}
-
-	private static boolean hasWon(long player) {
+	
+	// Determines if the current position is static. A static position is defined as
+	// any position in which the moving player is not being forced to go to a particular
+	// square (in other words, there is no active three-in-a-row for the opponent)
+	private boolean isStatic() {
+		boolean x_turn = xTurn();
+		long defender = x_turn ? _x : _o;
+		long attacker = x_turn ? _o : _x;
 		for (long win_pattern : WIN_PATTERNS)
-			if ((player & win_pattern) == win_pattern)
-				return true;
-		return false;
+			if (numOnes(attacker & win_pattern) == 3 && (defender & win_pattern) == 0)
+				return false;
+		return true;
+	}
+	
+	// Counts the number of ones in a long
+	private static int numOnes(long l) {
+		return l == 0 ? 0 : numOnes(l & (l-1)) + 1;
 	}
 
 	@Override

@@ -9,6 +9,7 @@ public enum SquareType {
 	// EDGE: One of the 24 squares that run along the shortest path between two corners
 	// FACE: One of the 24 squares directly adjacent to the middle squares 
 	
+	// Layout of all the SquareTypes in the game
 	private static final SquareType[] LAYOUT = new SquareType[] {
 			SquareType.CORNER, SquareType.EDGE, SquareType.EDGE, SquareType.CORNER,
 			SquareType.EDGE, SquareType.FACE, SquareType.FACE, SquareType.EDGE,
